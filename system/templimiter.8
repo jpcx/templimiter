@@ -1,0 +1,82 @@
+.TH templimiter 8  "February 15, 2019" "version 0.1.0" "USER COMMANDS"
+.SH NAME
+templimiter \- Limits system temperature by reading thermal files,
+throttling the cpu, and sending SIGSTOP and SIGCONT signals.
+.SH SYNOPSIS
+.B templimiter
+[\fB\-d \-\-debug\fR] [\fB\-h \-\-help\fR] [\fB\-v \-\-version\fR] [\fB\-w -\-which-conf\fR]
+.SH DESCRIPTION
+This software was written for systems with inadequate hardware cooling.
+By constantly monitoring system thermal files, it is able to respond to
+dangerous temperature levels by either throttling the CPU or sending
+SIGSTOP signals to the highest CPU-consuming processes. If the
+temperature is below a given threshold, templimiter will dethrottle the
+CPU to maximum speeds and send SIGCONT signals to the processes stopped
+by the program.
+.PP
+All configuration is established via the templimiter.conf file. Path is
+defined during the pre-make ./configure step. Use the \-\-which\-conf
+option to find its location on your system. Please refer to README.md
+for full configuration documentation and warnings.
+.PP
+This program is meant to be run as a persistent daemon and is already
+configured to use systemd if possible. Please refer to README.md for
+more information. It is advisable to run the program with \-\-debug
+first in order to verify that no configuration issues are preventing
+execution.
+.SH OPTIONS
+.TP
+\fB\-h \-\-help\fR
+Display a brief help text.
+.TP
+\fB\-d \-\-debug\fR
+Run normally and print all information to the console.
+.br
+During initialization, notifies if any configuration tags were not
+found. Additionally, logs any errors thrown before the logger has
+been initialized. During runtime, mirrors the logfile output.
+.TP
+\fB\-v \-\-version\fR
+Print the software version and exit.
+.TP
+\fB\-w \-\-which\-conf\fR
+Print the configuration file path and exit.
+.SH EXAMPLES
+.TP
+Run normally while printing all output to console:
+.B templimiter \-d
+.PP
+.TP
+Run as a systemd daemon:
+.B systemctl enable templimiter
+.br
+.B systemctl start templimiter
+.PP
+.SH EXIT STATUS
+templimiter returns 0 if exiting normally, and returns 1 if any runtime
+errors are thrown.
+.PP
+Unless an error has occurred, templimiter will run continuously and
+will never exit during system operation.
+.SH AUTHOR
+Written by Justin Collier <jpcxist@gmail.com>.
+.SH REPORTING BUGS
+Please report any bugs to <jpcxist@gmail.com>, or submit an issue at
+<https://github.com/jpcx/templimiter>.
+.SH COPYRIGHT
+Copyright \(co Justin Collier  License GPLv3+: GNU GPL version 3 or later
+<https://gnu.org/licenses/gpl.html>.
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.SH SEE ALSO
+README.md contains all the configuration options. It is available
+online at <https://github.com/jpcx/templimiter/blob/0.1.0/README.md>.
+.PP
+Full documentation of C++ source is available by running `doxygen
+Doxyfile` in the source directory and viewing docs/html/index.html in a
+web browser.
+.PP
+See the GitHub page for more information.
+.br
+<https://github.com/jpcx/templimiter/tree/master>.
