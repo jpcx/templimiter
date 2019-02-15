@@ -1,0 +1,13 @@
+[Unit]
+Description=templimiter - Linux Temperature Limiter
+Documentation=man:templimiter.service(8)
+
+[Service]
+ExecStart=templimiter
+Restart=always
+RestartSec=1
+User=root
+
+[Install]
+WantedBy=multi-user.target
+Alias=templimiter.service
