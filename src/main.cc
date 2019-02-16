@@ -19,7 +19,7 @@
  * @author Justin Collier (jpcxist@gmail.com)
  * @brief Limits system temperature by reading thermal files, throttling
  * the cpu, and sending SIGSTOP and SIGCONT signals.
- * @version 0.1.0
+ * @version 0.1.2
  * @date created 2019-01-31
  * @date modified 2019-02-15
  * @copyright Copyright (c) 2019 Justin Collier
