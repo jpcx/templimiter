@@ -20,12 +20,13 @@
  * @brief Provides templimiter::tools functions that simplify std::vector
  * operations
  * @date created 2019-02-05
- * @date modified 2019-02-14
+ * @date modified 2019-02-15
  */
 
 #pragma once
 
 #include <algorithm>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -164,6 +165,72 @@ std::vector<T> fill(size_t size, const T &fill_val) {
     vect.push_back(fill_val);
   }
   return vect;
+}
+
+/**
+ * @brief Returns the max n elements of a vector sorted in descending order
+ *
+ * @tparam T Type of vector
+ * @param vect Vector to query
+ * @param n_elements Number of elements
+ * @return std::vector<T>
+ * @throw templimiter::error::ArgumentError if a comparison cannot be made.
+ */
+template <typename T>
+std::vector<T> max_n_elements(const std::vector<T> &vect, size_t n_elements) {
+  std::vector<T> results = fill<T>(n_elements, 0);
+  try {
+    for (const auto &v : vect) {
+      for (size_t i = 0; i < n_elements; i++) {
+        if (v > results[i]) {
+          for (size_t shift = n_elements; shift >= i + 1; shift--) {
+            results[shift] = results[shift - 1];
+          }
+          results[i] = v;
+          break;
+        }
+      }
+    }
+  } catch (...) {
+    throw error::ArgumentError(
+        "vect", "(numeric)", "3",
+        "tools::max_n_elements must be called with a numeric vector.");
+  }
+
+  return results;
+}
+
+/**
+ * @brief Returns the min n elements of a vector sorted in ascending order
+ *
+ * @tparam T Type of vector
+ * @param vect Vector to query
+ * @param n_elements Number of elements
+ * @return std::vector<T>
+ * @throw templimiter::error::ArgumentError if a comparison cannot be made.
+ */
+template <typename T>
+std::vector<T> min_n_elements(const std::vector<T> &vect, size_t n_elements) {
+  std::vector<T> results = fill<T>(n_elements, std::numeric_limits<T>().max());
+  try {
+    for (const auto &v : vect) {
+      for (size_t i = 0; i < n_elements; i++) {
+        if (v < results[i]) {
+          for (size_t shift = n_elements; shift >= i + 1; shift--) {
+            results[shift] = results[shift - 1];
+          }
+          results[i] = v;
+          break;
+        }
+      }
+    }
+  } catch (...) {
+    throw error::ArgumentError(
+        "vect", "(numeric)", "3",
+        "tools::min_n_elements must be called with a numeric vector.");
+  }
+
+  return results;
 }
 
 /**

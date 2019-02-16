@@ -19,11 +19,11 @@
  * @author Justin Collier (jpcxist@gmail.com)
  * @brief Defines software version
  * @date created 2019-02-09
- * @date modified 2019-02-09
+ * @date modified 2019-02-15
  */
 
 #pragma once
 
 #define TEMPLIMITER_VER_MAJOR 0
 #define TEMPLIMITER_VER_MINOR 1
-#define TEMPLIMITER_VER_PATCH 0
+#define TEMPLIMITER_VER_PATCH 1

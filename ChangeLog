@@ -1,4 +1,28 @@
 2019-02-15  Justin Collier  <jpcxist@gmail.com>
 
-	* templimiter: Version 0.1.0 released
+	* templimiter: Version 0.1.0 released.
 
+2019-02-15  Justin Collier  <jpcxist@gmail.com>
+
+	* src/templimiter/daemon/monitor.cc
+	(is_below_max_speed_, is_above_min_speed_): 
+	Changed min/max criteria to use the midpoint between two steps in order
+	minimize false positives due to fluctuations.
+	(dethrottle_next_higher_, throttle_next_lower_)
+	(dethrottle_highest_, throttle_lowest_)
+	(exec_dethrottle_, exec_throttle_, run, Monitor):
+	Added expected frequency checking based on previously set values.
+
+	* src/templimiter/daemon/monitor.h
+	(Monitor): Created variables that track unexpected throttle behavior in order 
+	to minimize overthrottling when the scaling_max_freq files are being modified 
+	externally.
+	(dethrottle_highest_, throttle_lowest_): New arg cur_speeds.
+	Provided cur_speeds externally in response to new expected frequency checking
+	(some cores may be linked in the system).
+
+	* src/templimiter/tools/vector.h
+	(max_n_elements): Created procedure.
+	(min_n_elements): Created procedure.
+
+	* README.md: Clarified prerequisites and installation instructions.
