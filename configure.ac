@@ -3,7 +3,7 @@
 
 # Autoconf initialization.
 AC_PREREQ([2.69])
-AC_INIT([templimiter], [0.1.1], [jpcxist@gmail.com])
+AC_INIT([templimiter], [0.1.2], [jpcxist@gmail.com])
 AC_CONFIG_SRCDIR([src/main.cc])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])

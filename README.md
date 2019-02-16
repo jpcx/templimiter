@@ -33,10 +33,10 @@ cd templimiter
 
 _Note: This software uses autotools for building. Due to an issue regarding timestamp preservation, `./configure` may not work immediately._
 
-If make fails with a 'not found' message:
+If make fails with a 'not found' message, either:
 
 + Use the source archive instead of cloning the repository (timestamps are preserved).
-+ Execute `sh scripts/fix-timestamps.sh` before running configure and make.
++ Or execute `sh scripts/fix-timestamps.sh` before running configure and make.
 
 ```bash
 ./configure
