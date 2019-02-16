@@ -14,12 +14,13 @@ This program is meant to be run as a persistent daemon and is already configured
 
 ### Prerequisites
 
++ Linux
 + __c++17__
 + pkg-config
   + Necessary for automatic systemd configuration.
   + Manual configuration of systemd directory can still be acheived without pkg-config via `./configure --with-systemdsystemunitdir=DIR`
 
-### Building
+### Getting the Source
 
 Clone the repo (or download the source archive).
 
@@ -28,27 +29,53 @@ git clone https://github.com/jpcx/templimiter.git
 cd templimiter
 ```
 
+### Building
+
 _Note: This software uses autotools for building. Due to an issue regarding timestamp preservation, `./configure` may not work immediately._
 
-_To solve this problem, either download the source archive instead of cloning or follow the instructions below (executing `sh scripts/fix-timestamps.sh` before running `./configure`)._
+If make fails with a 'not found' message:
+
++ Use the source archive instead of cloning the repository (timestamps are preserved).
++ Execute `sh scripts/fix-timestamps.sh` before running configure and make.
 
 ```bash
-sh scripts/fix-timestamps.sh # Fix autotools issues
-
 ./configure
 make
 sudo make install
+```
+
+### Setup
+
+```bash
 # Edit the configuration, if desired
 sudo nano $(templimiter --which-conf)
+```
+
+### Verification
+
+_NOTE: Setting low and tight thresholds for the following debugging step is recommended._
+
+```bash
 # Check for errors
 sudo templimiter --debug
-# If it runs and doesn't exit, enable the service
+# In another terminal, stimulate the CPU
+dd if=/dev/zero of=/dev/null bs=8M status=progress
+```
+
+_NOTE: During debug mode, if the thresholds are set appropriately you should see output signifying that actions were taken to limit temperature. Use `^C` to exit._
+
+### Daemon Initialization
+
+```bash
+# If it runs as expected, enable the service
 sudo systemctl enable templimiter
 ```
 
 ## Usage
 
 templimiter is meant to be run as a daemon; simply start the service if you are using systemd.
+
+___Note: Proper debugging is advised before enabling; the daemon is set to relaunch on failure.___
 
 ```bash
 sudo systemctl start templimiter.service
