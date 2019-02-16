@@ -19,7 +19,7 @@
  * @author Justin Collier (jpcxist@gmail.com)
  * @brief Provides the templimiter::daemon::Monitor class
  * @date created 2019-02-09
- * @date modified 2019-02-14
+ * @date modified 2019-02-15
  */
 
 #include "templimiter/daemon/monitor.h"
@@ -96,12 +96,16 @@ std::vector<std::shared_ptr<Pid>> Monitor::find_SIGSTOP_available_pids_()
 
 bool Monitor::is_below_max_speed_(const std::vector<u_long> &cur_speeds) {
   std::vector<u_long> max_speeds;
+  std::vector<u_long> second_max_speeds;
   if (cfg_->use_scaling_available()) {
     for (const auto &v : cfg_->scaling_available_frequencies()) {
-      max_speeds.push_back(*std::max_element(v.begin(), v.end()));
+      std::vector<u_long> max_two = tools::max_n_elements(v, 2);
+      max_speeds.push_back(max_two[0]);
+      second_max_speeds.push_back(max_two[1]);
     }
   } else {
     max_speeds = cfg_->cpuinfo_max_freqs();
+    second_max_speeds = cfg_->cpuinfo_min_freqs();
   }
   if (cur_speeds.size() != max_speeds.size()) {
     throw error::InternalError(
@@ -110,7 +114,10 @@ bool Monitor::is_below_max_speed_(const std::vector<u_long> &cur_speeds) {
         "verification.");
   }
   for (size_t i = 0; i < cur_speeds.size(); i++) {
-    if (cur_speeds[i] < max_speeds[i]) {
+    u_long median = (max_speeds[i] + second_max_speeds[i]) / 2;
+    // Check for relation to median of max and second max
+    // Prevents slight system throttling from appearing as throttled
+    if (cur_speeds[i] < median) {
       return true;
     }
   }
@@ -119,12 +126,16 @@ bool Monitor::is_below_max_speed_(const std::vector<u_long> &cur_speeds) {
 
 bool Monitor::is_above_min_speed_(const std::vector<u_long> &cur_speeds) {
   std::vector<u_long> min_speeds;
+  std::vector<u_long> second_min_speeds;
   if (cfg_->use_scaling_available()) {
     for (const auto &v : cfg_->scaling_available_frequencies()) {
-      min_speeds.push_back(*std::min_element(v.begin(), v.end()));
+      std::vector<u_long> min_two = tools::min_n_elements(v, 2);
+      min_speeds.push_back(min_two[0]);
+      second_min_speeds.push_back(min_two[1]);
     }
   } else {
     min_speeds = cfg_->cpuinfo_min_freqs();
+    second_min_speeds = cfg_->cpuinfo_max_freqs();
   }
   if (cur_speeds.size() != min_speeds.size()) {
     throw error::InternalError(
@@ -133,7 +144,10 @@ bool Monitor::is_above_min_speed_(const std::vector<u_long> &cur_speeds) {
         "verification.");
   }
   for (size_t i = 0; i < cur_speeds.size(); i++) {
-    if (cur_speeds[i] > min_speeds[i]) {
+    u_long median = (min_speeds[i] + second_min_speeds[i]) / 2;
+    // Check for relation to median of max and second max
+    // Prevents slight system throttling from appearing as throttled
+    if (cur_speeds[i] > median) {
       return true;
     }
   }
@@ -213,6 +227,11 @@ void Monitor::dethrottle_next_higher_(const std::vector<u_long> &cur_speeds) {
       cfg_->scaling_available_frequencies();
   for (size_t i = 0; i < cur_speeds.size(); i++) {
     u_long speed = cur_speeds[i];
+    // Check for unexpected frequency
+    if (speed != expected_frequencies_[i]) {
+      found_unexpected_frequency_ = true;
+      break;
+    }
     std::vector<u_long> avail_speeds = scaling_avail[i];
     u_long ul_max = std::numeric_limits<u_long>().max();
     u_long next = ul_max;
@@ -221,6 +240,7 @@ void Monitor::dethrottle_next_higher_(const std::vector<u_long> &cur_speeds) {
     }
     if (next != ul_max) {
       cfg_->scaling_max_freq_files()->overwrite(i, next);
+      expected_frequencies_[i] = next;
     }
   }
 }
@@ -230,6 +250,11 @@ void Monitor::throttle_next_lower_(const std::vector<u_long> &cur_speeds) {
       cfg_->scaling_available_frequencies();
   for (size_t i = 0; i < cur_speeds.size(); i++) {
     u_long speed = cur_speeds[i];
+    // Check for unexpected frequency
+    if (speed != expected_frequencies_[i]) {
+      found_unexpected_frequency_ = true;
+      break;
+    }
     std::vector<u_long> avail_speeds = scaling_avail[i];
     u_long next = 0;
     for (const auto &v : avail_speeds) {
@@ -237,49 +262,87 @@ void Monitor::throttle_next_lower_(const std::vector<u_long> &cur_speeds) {
     }
     if (next != 0) {
       cfg_->scaling_max_freq_files()->overwrite(i, next);
+      expected_frequencies_[i] = next;
     }
   }
 }
 
-void Monitor::dethrottle_highest_() {
+void Monitor::dethrottle_highest_(const std::vector<u_long> &cur_speeds) {
   std::vector<u_long> max_freqs = cfg_->cpuinfo_max_freqs();
-  const auto &curfreq_files = cfg_->scaling_max_freq_files();
-  for (size_t i = 0; i < curfreq_files->size(); i++) {
-    curfreq_files->overwrite(i, max_freqs[i]);
+  for (size_t i = 0; i < cur_speeds.size(); i++) {
+    // Check for unexpected frequency
+    if (cur_speeds[i] != expected_frequencies_[i]) {
+      found_unexpected_frequency_ = true;
+      break;
+    }
+    u_long new_freq = max_freqs[i];
+    cfg_->scaling_max_freq_files()->overwrite(i, new_freq);
+    expected_frequencies_[i] = new_freq;
   }
 }
 
-void Monitor::throttle_lowest_() {
+void Monitor::throttle_lowest_(const std::vector<u_long> &cur_speeds) {
   std::vector<u_long> min_freqs = cfg_->cpuinfo_min_freqs();
-  const auto &curfreq_files = cfg_->scaling_max_freq_files();
-  for (size_t i = 0; i < curfreq_files->size(); i++) {
-    const auto &cur_reading = curfreq_files->read()[i];
-    if (cur_reading > min_freqs[i]) {
-      curfreq_files->overwrite(i, min_freqs[i]);
+  for (size_t i = 0; i < cur_speeds.size(); i++) {
+    // Check for unexpected frequency
+    if (cur_speeds[i] != expected_frequencies_[i]) {
+      found_unexpected_frequency_ = true;
+      break;
     }
+    u_long new_freq = min_freqs[i];
+    cfg_->scaling_max_freq_files()->overwrite(i, new_freq);
+    expected_frequencies_[i] = new_freq;
   }
 }
 
 void Monitor::exec_dethrottle_() {
-  std::vector<u_long> cur_speeds = cfg_->scaling_max_freq_files()->read();
-  if (is_below_max_speed_(cur_speeds)) {
-    out_->log("Dethrottling CPU.");
-    if (cfg_->use_scaling_available()) {
-      dethrottle_next_higher_(cur_speeds);
-    } else {
-      dethrottle_highest_();
+  if (found_unexpected_frequency_) {
+    if (cooldown_ct_ >= unexpected_frequency_cooldown_) {
+      found_unexpected_frequency_ = false;
+      expected_frequencies_ = cfg_->scaling_max_freq_files()->read();
+      cooldown_ct_ = 0;
+    }
+  } else {
+    std::vector<u_long> cur_speeds = cfg_->scaling_max_freq_files()->read();
+    if (is_below_max_speed_(cur_speeds)) {
+      out_->log("Dethrottling CPU.");
+      if (cfg_->use_scaling_available()) {
+        dethrottle_next_higher_(cur_speeds);
+      } else {
+        dethrottle_highest_(cur_speeds);
+      }
+      if (found_unexpected_frequency_) {
+        // warn the user
+        out_->err("[Warning] Found unexpected frequency.\nWaiting " +
+                  tools::to_string(unexpected_frequency_cooldown_) +
+                  " iterations before reassessment.");
+      }
     }
   }
 }
 
 void Monitor::exec_throttle_() {
-  std::vector<u_long> cur_speeds = cfg_->scaling_max_freq_files()->read();
-  if (is_above_min_speed_(cur_speeds)) {
-    out_->log("Throttling CPU.");
-    if (cfg_->use_scaling_available()) {
-      throttle_next_lower_(cur_speeds);
-    } else {
-      throttle_lowest_();
+  if (found_unexpected_frequency_) {
+    if (cooldown_ct_ >= unexpected_frequency_cooldown_) {
+      found_unexpected_frequency_ = false;
+      expected_frequencies_ = cfg_->scaling_max_freq_files()->read();
+      cooldown_ct_ = 0;
+    }
+  } else {
+    std::vector<u_long> cur_speeds = cfg_->scaling_max_freq_files()->read();
+    if (is_above_min_speed_(cur_speeds)) {
+      out_->log("Throttling CPU.");
+      if (cfg_->use_scaling_available()) {
+        throttle_next_lower_(cur_speeds);
+      } else {
+        throttle_lowest_(cur_speeds);
+      }
+      if (found_unexpected_frequency_) {
+        // warn the user
+        out_->err("[Warning] Found unexpected frequency.\nWaiting " +
+                  tools::to_string(unexpected_frequency_cooldown_) +
+                  " iterations before reassessment.");
+      }
     }
   }
 }
@@ -308,6 +371,8 @@ void Monitor::exec_throttle_() {
           exec_SIGCONT_();
         }
       }
+      // Increment throttle cooldown count in main loop
+      if (found_unexpected_frequency_) cooldown_ct_++;
       sleep();
     }
   } else if (cfg_->use_throttle()) {
@@ -319,6 +384,8 @@ void Monitor::exec_throttle_() {
       } else if (max_temp < cfg_->temp_dethrottle()) {
         exec_dethrottle_();
       }
+      // Increment throttle cooldown count in main loop
+      if (found_unexpected_frequency_) cooldown_ct_++;
       sleep();
     }
   } else if (cfg_->use_SIGSTOP()) {
@@ -341,7 +408,9 @@ void Monitor::exec_throttle_() {
 
 [[noreturn]] Monitor::Monitor(const std::shared_ptr<Config> &cfg,
                               const std::shared_ptr<Logger> &out)
-    : cfg_(cfg), out_(out) {
+    : cfg_(cfg),
+      out_(out),
+      expected_frequencies_(cfg_->scaling_max_freq_files()->read()) {
   run_();
 }
 

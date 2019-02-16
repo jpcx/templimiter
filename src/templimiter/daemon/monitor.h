@@ -19,7 +19,7 @@
  * @author Justin Collier (jpcxist@gmail.com)
  * @brief Provides the templimiter::daemon::Monitor class
  * @date created 2019-02-09
- * @date modified 2019-02-09
+ * @date modified 2019-02-15
  */
 
 #pragma once
@@ -52,6 +52,32 @@ class Monitor {
 
   /** @brief Vector of all Pid objects that have been sent SIGSTOP */
   std::vector<std::shared_ptr<Pid>> self_stopped_pids_;
+
+  /**
+   * @brief Number of iterations to wait before throttling again when
+   * throttling is not behaving as expected
+   */
+  u_short unexpected_frequency_cooldown_ = 20;
+
+  /**
+   * @brief Tracks the number of iterations spent cooling down after an 
+   * unexpected frequency encounter
+   */
+  u_short cooldown_ct_ = 0;
+
+  /**
+   * @brief Tracks the expected values of the scaling_max_freq files based on 
+   * throttling actions in order to determine whether or not the files are 
+   * being modified elsewhere
+   */
+  std::vector<u_long> expected_frequencies_;
+
+  /**
+   * @brief Whether or not the program has found a cpu frequency reading that
+   * is not as expected (based on previous throttle actions) and is waiting a
+   * few iterations
+   */
+  bool found_unexpected_frequency_ = false;
 
   /**
    * @brief Sums the current cpu time and returns it
@@ -137,11 +163,19 @@ class Monitor {
    */
   void throttle_next_lower_(const std::vector<u_long> &cur_speeds);
 
-  /** @brief Dethrottles each cpu to the highest possible frequency */
-  void dethrottle_highest_();
+  /** 
+   * @brief Dethrottles each cpu to the highest possible frequency
+   * 
+   * @param cur_speeds Vector of current CPU speeds
+   */
+  void dethrottle_highest_(const std::vector<u_long> &cur_speeds);
 
-  /** @brief Throttles each cpu to the lowest possible frequency */
-  void throttle_lowest_();
+  /** 
+   * @brief Throttles each cpu to the lowest possible frequency
+   * 
+   * @param cur_speeds Vector of current CPU speeds
+   */
+  void throttle_lowest_(const std::vector<u_long> &cur_speeds);
 
   /** @brief Performs the dethrottle operation based on the configuration */
   void exec_dethrottle_();
