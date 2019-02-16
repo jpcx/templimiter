@@ -26,3 +26,8 @@
 	(min_n_elements): Created procedure.
 
 	* README.md: Clarified prerequisites and installation instructions.
+
+2019-02-16  Justin Collier  <jpcxist@gmail.com>
+
+	* src/main.cc: Updated version documentation.
+	* README.md: Fixed fix-timestamps.sh clarification issue.
